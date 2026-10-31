@@ -31,8 +31,9 @@ export const addNowPlayingTag = (currentSettings: boolean): void => {
     "tv:text-xs absolute z-controls rounded bg-surface-bg-lowest state-layer px-1 text-sm font-semibold top-1.5 right-1.5";
   nowPlayingTag.textContent = i18n.t("nowPlaying");
   const thumbnailEl = document.querySelector(
-    `section > div > a[href$=${`'/videos/${currentId}'`}]`,
+    `section > div > div > a[href$=${`'/videos/${currentId}'`}]`,
   );
+
   if (!thumbnailEl) return;
 
   thumbnailEl.appendChild(nowPlayingTag);
@@ -45,9 +46,11 @@ export const addProgressBar = (
 ): void => {
   if (!streamerPath) return;
 
+  // section > div > a[href^='/doubletoasted/videos/']
+
   const hrefSelector = `'/${streamerPath}/videos'`;
   const thumbnailNode = document.querySelectorAll<HTMLAnchorElement>(
-    `section > div > a[href^=${hrefSelector}]`,
+    `section > div > div > a[href^=${hrefSelector}]`,
   );
 
   const maincolor = "#8af648";

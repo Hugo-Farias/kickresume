@@ -209,12 +209,12 @@ export default defineContentScript({
             );
           }
 
-          const isTagRendered = checkElement("div", "#kb2-now-playing-tag");
+          // const isTagRendered = checkElement("div", "#kb2-now-playing-tag");
 
-          if (!isTagRendered) {
-            addNowPlayingTag(currentSettings.showNowPlayingTag);
-            return false;
-          }
+          // if (!isTagRendered) {
+          addNowPlayingTag(currentSettings.showNowPlayingTag);
+          //   return false;
+          // }
 
           if (!videoId) return true;
 

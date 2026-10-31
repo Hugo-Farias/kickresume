@@ -195,6 +195,7 @@ export default defineContentScript({
 
         until(() => {
           if (document.readyState !== "complete") return;
+          console.log("until");
 
           const isProgressBarRendered = checkElement(
             "span",
@@ -209,12 +210,12 @@ export default defineContentScript({
             );
           }
 
-          // const isTagRendered = checkElement("div", "#kb2-now-playing-tag");
+          const isTagRendered = checkElement("div", "#kb2-now-playing-tag");
 
-          // if (!isTagRendered) {
-          addNowPlayingTag(currentSettings.showNowPlayingTag);
-          //   return false;
-          // }
+          if (!isTagRendered) {
+            addNowPlayingTag(currentSettings.showNowPlayingTag);
+            return false;
+          }
 
           if (!videoId) return true;
 
@@ -226,9 +227,13 @@ export default defineContentScript({
 
           const videoData = fullData?.[videoId] ?? null;
 
+          // WARN: This is a hacky solution to restore the video time after navigation.
+          // It is not a good solution, but it works for now.
           if (videoData && !isVideoRestored) {
-            isVideoRestored = resumeVideo(video, videoId, videoData);
-
+            setTimeout(() => {
+              if (!videoId) return true;
+              isVideoRestored = resumeVideo(video, videoId, videoData);
+            }, 2000);
             if (!isVideoRestored) return;
           }
 

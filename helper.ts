@@ -89,6 +89,8 @@ export const storeCacheTime = (data: ItemCache, videoId: string) => {
     JSON.stringify({ ...fullCache, [videoId]: data }),
   );
 
+  clog("Stored cache time for videoId:", videoId, "Data:", data);
+
   return { ...fullCache, [videoId]: data };
 };
 

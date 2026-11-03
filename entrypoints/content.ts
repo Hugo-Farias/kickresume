@@ -27,7 +27,7 @@ let timeoutSaveTime: ReturnType<typeof setTimeout>;
 // let timeoutCloseChat: ReturnType<typeof setTimeout>;
 let isChatClosed = false;
 let fullData: FullCache | null = null;
-let isVideoRestored = false;
+let isVideoResumed = false;
 
 const devFunc = (video: HTMLVideoElement) => {
   if (!import.meta.env.DEV) return;
@@ -175,7 +175,7 @@ export default defineContentScript({
     window.navigation.addEventListener("navigate", () => {
       clearTimeout(timeoutMain);
       clearTimeout(timeoutSaveTime);
-      isVideoRestored = false;
+      isVideoResumed = false;
       fullData = getCacheData();
 
       timeoutMain = setTimeout(() => {
@@ -195,7 +195,21 @@ export default defineContentScript({
 
         until(() => {
           if (document.readyState !== "complete") return;
-          console.log("until");
+
+          if (!videoId) return true;
+
+          const video = document.querySelector<HTMLVideoElement>("video");
+          if (!video) return;
+          if (video.readyState < 4) return;
+
+          if (!videoId) return;
+
+          const videoData = fullData?.[videoId] ?? null;
+
+          if (videoData && !isVideoResumed) {
+            isVideoResumed = resumeVideo(video, videoId, videoData);
+            if (!isVideoResumed) return;
+          }
 
           const isProgressBarRendered = checkElement(
             "span",
@@ -217,26 +231,6 @@ export default defineContentScript({
             return false;
           }
 
-          if (!videoId) return true;
-
-          const video = document.querySelector<HTMLVideoElement>("video");
-          if (!video) return;
-          if (video.readyState < 2) return;
-
-          if (!videoId) return;
-
-          const videoData = fullData?.[videoId] ?? null;
-
-          // WARN: This is a hacky solution to restore the video time after navigation.
-          // It is not a good solution, but it works for now.
-          if (videoData && !isVideoRestored) {
-            setTimeout(() => {
-              if (!videoId) return true;
-              isVideoRestored = resumeVideo(video, videoId, videoData);
-            }, 2000);
-            if (!isVideoRestored) return;
-          }
-
           devFunc(video);
 
           if (!firstRun) return true; // Code bellow ONLY runs on first real full page load
@@ -255,6 +249,7 @@ export default defineContentScript({
       }, 500);
     });
 
+    // Settings check section
     chrome.storage.onChanged.addListener((res: SettingsChanges) => {
       getSettings().then((settings: SettingsT) => {
         currentSettings = settings;

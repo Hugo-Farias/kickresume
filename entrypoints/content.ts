@@ -19,7 +19,7 @@ import {
 import type { FullCache, ItemCache, SettingsChanges, SettingsT } from "@/types";
 import { initialSettings } from "./popup/Settings";
 
-const minSecsForCaching = 60;
+const minSecsForCaching = 30;
 let lastTimeUpdate = 0;
 let firstRun = true;
 let timeoutMain: ReturnType<typeof setTimeout>;
@@ -86,7 +86,7 @@ const closeChat = (settings: boolean) => {
 
 const resumeVideo = (
   video: HTMLVideoElement,
-  videoId: string,
+  videoId: string | null,
   videoData: ItemCache,
 ): boolean => {
   if (!videoId) return false;
@@ -121,9 +121,8 @@ const storeVideoTime = (
   videoId: string,
   url: string,
 ) => {
-  const curr = Math.trunc(video.currentTime);
-
-  if (curr < minSecsForCaching) return;
+  if (video.currentTime < minSecsForCaching) return;
+  const curr = video.currentTime;
   if (Math.abs(lastTimeUpdate - curr) < 10) return;
 
   lastTimeUpdate = curr;
@@ -196,21 +195,6 @@ export default defineContentScript({
         until(() => {
           if (document.readyState !== "complete") return;
 
-          if (!videoId) return true;
-
-          const video = document.querySelector<HTMLVideoElement>("video");
-          if (!video) return;
-          if (video.readyState < 4) return;
-
-          if (!videoId) return;
-
-          const videoData = fullData?.[videoId] ?? null;
-
-          if (videoData && !isVideoResumed) {
-            isVideoResumed = resumeVideo(video, videoId, videoData);
-            if (!isVideoResumed) return;
-          }
-
           const isProgressBarRendered = checkElement(
             "span",
             "#kb2-progress-bar",
@@ -224,11 +208,30 @@ export default defineContentScript({
             );
           }
 
+          if (!videoId) return true;
+
           const isTagRendered = checkElement("div", "#kb2-now-playing-tag");
 
           if (!isTagRendered) {
             addNowPlayingTag(currentSettings.showNowPlayingTag);
             return false;
+          }
+
+          const video = document.querySelector<HTMLVideoElement>("video");
+          if (!video) return;
+          if (video.readyState < 4) return;
+
+          if (!videoId) return;
+
+          const videoData = fullData?.[videoId] ?? null;
+
+          console.log("✔️ isVideoResumed ==>", isVideoResumed);
+
+          if (videoData && !isVideoResumed) {
+            setTimeout(() => {
+              isVideoResumed = resumeVideo(video, videoId, videoData);
+            }, 500);
+            if (!isVideoResumed) return false;
           }
 
           devFunc(video);

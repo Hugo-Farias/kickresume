@@ -19,12 +19,11 @@ import {
 import type { FullCache, ItemCache, SettingsChanges, SettingsT } from "@/types";
 import { initialSettings } from "./popup/Settings";
 
-const minSecsForCaching = 30;
+const minimalSecsForCaching = 60;
 let lastTimeUpdate = 0;
 let firstRun = true;
 let timeoutMain: ReturnType<typeof setTimeout>;
 let timeoutSaveTime: ReturnType<typeof setTimeout>;
-// let timeoutCloseChat: ReturnType<typeof setTimeout>;
 let isChatClosed = false;
 let fullData: FullCache | null = null;
 let isVideoResumed = false;
@@ -78,10 +77,6 @@ const closeChat = (settings: boolean) => {
     chatCloseBtn.click();
     isChatClosed = true;
   });
-  // clearTimeout(timeoutCloseChat);
-  // timeoutCloseChat = setTimeout(() => {
-  //
-  // }, 300);
 };
 
 const resumeVideo = (
@@ -90,22 +85,13 @@ const resumeVideo = (
   videoData: ItemCache,
 ): boolean => {
   if (!videoId) return false;
-  const loadedUrl = document.querySelector<HTMLLinkElement>(
-    "link[rel='canonical']",
-  );
-
-  if (!loadedUrl) return false;
-
-  if (loadedUrl.href !== window.location.href) return false;
-
-  if (video.currentTime > minSecsForCaching) return true;
 
   if (videoData) {
     clog("Data found", videoData);
     clog("Resuming video, time:", videoData.curr);
     lastTimeUpdate = videoData.curr;
     video.currentTime = videoData.curr;
-    if (videoData.curr < minSecsForCaching) {
+    if (videoData.curr < minimalSecsForCaching) {
       fullData = delFromCache(videoId);
     }
   } else {
@@ -113,7 +99,7 @@ const resumeVideo = (
     lastTimeUpdate = 0;
   }
 
-  return video.currentTime > minSecsForCaching;
+  return video.currentTime > minimalSecsForCaching;
 };
 
 const storeVideoTime = (
@@ -121,7 +107,7 @@ const storeVideoTime = (
   videoId: string,
   url: string,
 ) => {
-  if (video.currentTime < minSecsForCaching) return;
+  if (video.currentTime < minimalSecsForCaching) return;
   const curr = video.currentTime;
   if (Math.abs(lastTimeUpdate - curr) < 10) return;
 
@@ -177,6 +163,11 @@ export default defineContentScript({
       isVideoResumed = false;
       fullData = getCacheData();
 
+      const tempvid = document.querySelector<HTMLVideoElement>("video");
+      if (tempvid) {
+        tempvid.currentTime = 0;
+      }
+
       timeoutMain = setTimeout(() => {
         clog("Navigation event detected, re-initializing...");
 
@@ -187,14 +178,12 @@ export default defineContentScript({
         videoId = getVideoId(url);
         streamerPath = url.split("/")[3];
 
-        if (firstRun) {
-          closeChat(currentSettings.autoCloseChat);
-          closeSidebar(currentSettings.autoCloseSidebar);
-        }
-
         until(() => {
           if (document.readyState !== "complete") return;
-
+          if (firstRun) {
+            closeChat(currentSettings.autoCloseChat);
+            closeSidebar(currentSettings.autoCloseSidebar);
+          }
           const isProgressBarRendered = checkElement(
             "span",
             "#kb2-progress-bar",
@@ -214,24 +203,18 @@ export default defineContentScript({
 
           if (!isTagRendered) {
             addNowPlayingTag(currentSettings.showNowPlayingTag);
-            return false;
           }
 
           const video = document.querySelector<HTMLVideoElement>("video");
           if (!video) return;
           if (video.readyState < 4) return;
-
-          if (!videoId) return;
+          if (video.currentTime < 0.5) return;
 
           const videoData = fullData?.[videoId] ?? null;
 
-          console.log("✔️ isVideoResumed ==>", isVideoResumed);
-
           if (videoData && !isVideoResumed) {
-            setTimeout(() => {
-              isVideoResumed = resumeVideo(video, videoId, videoData);
-            }, 500);
-            if (!isVideoResumed) return false;
+            isVideoResumed = resumeVideo(video, videoId, videoData);
+            return false;
           }
 
           devFunc(video);
@@ -248,8 +231,8 @@ export default defineContentScript({
           });
 
           return true;
-        }, 500);
-      }, 500);
+        }, 1000);
+      }, 1000);
     });
 
     // Settings check section

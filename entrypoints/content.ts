@@ -32,7 +32,7 @@ const devFunc = (video: HTMLVideoElement) => {
   if (!import.meta.env.DEV) return;
   setTimeout(() => {
     video.pause();
-  }, 6000);
+  }, 10000);
 };
 
 const createClickVideoEvent = (
@@ -163,11 +163,6 @@ export default defineContentScript({
       isVideoResumed = false;
       fullData = getCacheData();
 
-      const tempvid = document.querySelector<HTMLVideoElement>("video");
-      if (tempvid) {
-        tempvid.currentTime = 0;
-      }
-
       timeoutMain = setTimeout(() => {
         clog("Navigation event detected, re-initializing...");
 
@@ -208,7 +203,8 @@ export default defineContentScript({
           const video = document.querySelector<HTMLVideoElement>("video");
           if (!video) return;
           if (video.readyState < 4) return;
-          if (video.currentTime < 0.5) return;
+          console.log("✔️ video.paused ==>", video.paused);
+          if (video.paused) return;
 
           const videoData = fullData?.[videoId] ?? null;
 

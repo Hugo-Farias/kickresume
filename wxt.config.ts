@@ -9,7 +9,7 @@ export default defineConfig({
     plugins: [tailwindcss(), preact()],
   }),
   manifest: {
-    name: "__MSG_extName__",
+    name: `__MSG_extName__${process.env.NODE_ENV === "development" ? " (Dev)" : ""}`,
     description: "__MSG_extDescription__",
     default_locale: "en",
     permissions: ["storage"],

@@ -203,7 +203,6 @@ export default defineContentScript({
           const video = document.querySelector<HTMLVideoElement>("video");
           if (!video) return;
           if (video.readyState < 4) return;
-          console.log("✔️ video.paused ==>", video.paused);
           if (video.paused) return;
 
           const videoData = fullData?.[videoId] ?? null;
